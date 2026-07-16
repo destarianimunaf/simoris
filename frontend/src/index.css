@@ -1,0 +1,26 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html {
+  background: #f8f6f1;
+}
+
+body {
+  @apply font-sans text-ink-900 antialiased;
+}
+
+/* jahitan tipis bergaya "segel" di sekeliling badge nomor surat */
+.stamp-border {
+  border: 1.5px dashed rgba(201, 138, 46, 0.55);
+}
+
+::selection {
+  background: #c98a2e;
+  color: white;
+}
+
+:focus-visible {
+  outline: 2px solid #c98a2e;
+  outline-offset: 2px;
+}
