@@ -1,0 +1,503 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SIMORIS — Sistem Penomoran Surat Otomatis</title>
+<style>
+  :root{
+    --ink-900:#14264a; --ink-800:#1a3157; --ink-600:#2c4c7c; --ink-400:#5b729c;
+    --ink-100:#e3e9f2; --ink-50:#f3f6fa; --segel:#c98a2e; --paper:#f8f6f1;
+    --red:#b3413a; --red-bg:#fbe9e7; --green:#2f7d5c; --green-bg:#e3f3ea;
+    --amber-bg:#fbeed4; --violet:#6a4c93; --violet-bg:#ece5f5; --blue-bg:#e3e9f2;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--paper); color:var(--ink-900);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    font-size:14px;
+  }
+  .mono{ font-family:"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace; }
+  header.app-header{ background:var(--ink-900); color:#fff; }
+  .wrap{ max-width:1080px; margin:0 auto; padding:0 24px; }
+  .header-inner{ display:flex; align-items:center; justify-content:space-between; gap:16px; padding:20px 0; flex-wrap:wrap; }
+  .brand{ display:flex; align-items:center; gap:14px; }
+  .brand-mark{ width:42px; height:42px; border-radius:10px; background:rgba(201,138,46,.92);
+    border:1.5px dashed rgba(255,255,255,.45); display:flex; align-items:center; justify-content:center;
+    font-weight:700; font-size:15px; color:var(--ink-900); }
+  .brand h1{ font-size:17px; margin:0; font-weight:800; letter-spacing:.2px; }
+  .brand p{ margin:2px 0 0; font-size:12px; color:rgba(255,255,255,.7); }
+  .header-actions{ display:flex; align-items:center; gap:18px; }
+  .count-box{ text-align:right; }
+  .count-box p{ margin:0; font-size:11px; color:rgba(255,255,255,.65); }
+  .count-box strong{ font-size:20px; font-weight:700; }
+  .btn{ border:none; cursor:pointer; font-weight:600; font-size:13px; border-radius:8px; padding:10px 16px;
+    display:inline-flex; align-items:center; gap:6px; }
+  .btn-segel{ background:var(--segel); color:var(--ink-900); }
+  .btn-segel:hover{ background:#b87c26; }
+  .btn-ghost{ background:#fff; color:var(--ink-800); border:1px solid var(--ink-100); }
+  .btn-ghost:hover{ background:var(--ink-50); }
+  .btn-dark{ background:var(--ink-900); color:#fff; }
+  .btn-dark:hover{ background:var(--ink-800); }
+  .btn-danger-text{ background:none; color:var(--red); font-weight:600; font-size:12px; padding:4px 6px; }
+  main{ padding:28px 0 60px; }
+  .toolbar{ display:flex; gap:10px; margin-bottom:16px; flex-wrap:wrap; }
+  .toolbar input[type=text], .toolbar select{
+    padding:10px 12px; border-radius:8px; border:1px solid var(--ink-100); font-size:13px; background:#fff;
+    font-family:inherit;
+  }
+  .toolbar .search{ flex:1; min-width:220px; position:relative; }
+  .toolbar .search input{ width:100%; padding-left:34px; }
+  .toolbar .search svg{ position:absolute; left:10px; top:50%; transform:translateY(-50%); color:var(--ink-400); }
+  .toolbar select{ min-width:220px; }
+  .toolbar-right{ display:flex; gap:8px; margin-left:auto; }
+  .card{ background:#fff; border:1px solid var(--ink-100); border-radius:12px; box-shadow:0 1px 2px rgba(20,38,74,.06),0 8px 24px -12px rgba(20,38,74,.18); overflow:hidden; }
+  table{ width:100%; border-collapse:collapse; }
+  thead tr{ background:var(--ink-50); }
+  th{ text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:.03em; color:var(--ink-600); font-weight:700; padding:11px 14px; }
+  td{ padding:11px 14px; font-size:13px; border-top:1px solid var(--ink-100); vertical-align:middle; }
+  tbody tr:hover{ background:#faf9f6; }
+  .nomor-badge{ font-weight:700; background:var(--paper); border:1.5px dashed rgba(201,138,46,.55); border-radius:6px; padding:4px 9px; display:inline-block; }
+  .badge{ display:inline-flex; padding:3px 10px; border-radius:999px; font-size:11px; font-weight:700; white-space:nowrap; }
+  .truncate{ max-width:220px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .empty{ padding:48px 20px; text-align:center; }
+  .empty p:first-child{ font-weight:700; margin:0 0 4px; }
+  .empty p:last-child{ color:var(--ink-400); font-size:13px; margin:0; }
+  .overlay{ position:fixed; inset:0; background:rgba(20,38,74,.5); backdrop-filter:blur(2px); display:flex; align-items:center; justify-content:center; padding:16px; z-index:50; }
+  .modal{ background:#fff; border-radius:16px; width:100%; max-width:480px; max-height:90vh; overflow-y:auto; box-shadow:0 20px 60px rgba(20,38,74,.35); }
+  .modal-head{ padding:18px 22px; border-bottom:1px solid var(--ink-100); display:flex; justify-content:space-between; align-items:center; }
+  .modal-head h2{ margin:0; font-size:15px; font-weight:800; }
+  .modal-close{ border:none; background:none; font-size:22px; line-height:1; color:var(--ink-400); cursor:pointer; }
+  .modal-body{ padding:22px; display:flex; flex-direction:column; gap:14px; }
+  .field label{ display:block; font-size:11px; font-weight:700; color:var(--ink-600); margin-bottom:5px; text-transform:uppercase; letter-spacing:.02em; }
+  .field input, .field select{ width:100%; padding:10px 12px; border-radius:8px; border:1px solid var(--ink-100); font-size:13px; font-family:inherit; }
+  .field input:focus, .field select:focus{ outline:none; border-color:var(--ink-600); box-shadow:0 0 0 3px rgba(44,76,124,.12); }
+  .grid2{ display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  .preview-box{ background:var(--paper); border:1.5px dashed rgba(201,138,46,.55); border-radius:8px; padding:10px 14px; display:flex; justify-content:space-between; align-items:center; }
+  .preview-box span:first-child{ font-size:11px; color:var(--ink-600); font-weight:600; }
+  .preview-box span:last-child{ font-weight:700; }
+  .form-actions{ display:flex; gap:10px; margin-top:4px; }
+  .form-actions button{ flex:1; padding:11px; border-radius:8px; font-weight:700; font-size:13px; cursor:pointer; }
+  .error-text{ color:var(--red); font-size:12px; font-weight:600; margin:0; }
+  .kode-row{ display:flex; justify-content:space-between; align-items:center; background:var(--paper); border-radius:8px; padding:8px 12px; font-size:13px; }
+  .kode-row + .kode-row{ margin-top:6px; }
+  .kode-row b{ font-family:inherit; }
+  .hint{ color:var(--ink-400); font-size:11px; margin:0; }
+  .toast{ position:fixed; bottom:22px; right:22px; background:var(--ink-900); color:#fff; padding:12px 16px; border-radius:10px; font-size:13px; font-weight:600; box-shadow:0 10px 30px rgba(20,38,74,.35); z-index:60; }
+  .settings-row{ display:flex; gap:10px; }
+  .badge-blue{ background:var(--blue-bg); color:var(--ink-800); }
+  .badge-green{ background:var(--green-bg); color:var(--green); }
+  .badge-emerald{ background:#e3f3ea; color:#1f6b46; }
+  .badge-amber{ background:var(--amber-bg); color:#9a6316; }
+  .badge-violet{ background:var(--violet-bg); color:var(--violet); }
+  .badge-red{ background:var(--red-bg); color:var(--red); }
+  .badge-slate{ background:#eef1f5; color:#475569; }
+  footer.app-footer{ text-align:center; padding:24px; color:var(--ink-400); font-size:12px; }
+  .banner{ background:#fff8ec; border:1px solid #f0dbb0; color:#8a5a12; font-size:12px; padding:10px 14px; border-radius:10px; margin-bottom:16px; line-height:1.5; }
+  @media (max-width:640px){
+    .grid2{ grid-template-columns:1fr; }
+    .header-actions{ width:100%; justify-content:space-between; }
+    .toolbar-right{ margin-left:0; width:100%; }
+    table{ font-size:12px; }
+    th:nth-child(1), td:nth-child(1){ display:none; }
+  }
+  @media print{
+    header, .toolbar, .btn, .empty p:last-child{ display:none !important; }
+    body{ background:#fff; }
+    .card{ box-shadow:none; border:none; }
+  }
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+(function(){
+  "use strict";
+
+  var STORE_KEY = "simoris_data_v1";
+
+  var WARNA_CLASS = {
+    blue:"badge-blue", green:"badge-green", emerald:"badge-emerald",
+    amber:"badge-amber", violet:"badge-violet", red:"badge-red", slate:"badge-slate"
+  };
+
+  var DEFAULT_KODE = [
+    { id:1,  kode:"KP", nama:"Kepegawaian", warna:"blue", aktif:true },
+    { id:2,  kode:"KU", nama:"Keuangan", warna:"green", aktif:true },
+    { id:3,  kode:"UM", nama:"Umum", warna:"emerald", aktif:true },
+    { id:4,  kode:"HK", nama:"Hukum", warna:"red", aktif:true },
+    { id:5,  kode:"OT", nama:"Organisasi dan Tata Laksana", warna:"slate", aktif:true },
+    { id:6,  kode:"PL", nama:"Perlengkapan", warna:"amber", aktif:true },
+    { id:7,  kode:"HM", nama:"Hubungan Masyarakat", warna:"violet", aktif:true },
+    { id:8,  kode:"IN", nama:"Informatika", warna:"blue", aktif:true },
+    { id:9,  kode:"PR", nama:"Perencanaan", warna:"emerald", aktif:true },
+    { id:10, kode:"PW", nama:"Pengawasan", warna:"red", aktif:true },
+    { id:11, kode:"DL", nama:"Pendidikan dan Pelatihan", warna:"amber", aktif:true }
+  ];
+
+  function defaultState(){
+    return {
+      settings: { instansiKode:"W.9", digit:3 },
+      counter: 3,
+      kodeList: DEFAULT_KODE,
+      surats: [
+        { id:1, urut:1, kodeId:3, tujuan:"Rizani", perihal:"Surat Undangan Rapat Koordinasi", tanggal:isoToday(-2), dibuatOleh:"" },
+        { id:2, urut:2, kodeId:1, tujuan:"Yunita", perihal:"PAK Konversi Jabatan Fungsional", tanggal:isoToday(-1), dibuatOleh:"" },
+        { id:3, urut:3, kodeId:6, tujuan:"", perihal:"Pengadaan ATK Triwulan I", tanggal:isoToday(0), dibuatOleh:"" }
+      ],
+      seeded:true
+    };
+  }
+
+  function isoToday(offsetDays){
+    var d = new Date();
+    d.setDate(d.getDate() + offsetDays);
+    return d.toISOString().slice(0,10);
+  }
+
+  function load(){
+    try{
+      var raw = localStorage.getItem(STORE_KEY);
+      if(!raw) { var s = defaultState(); save(s); return s; }
+      return JSON.parse(raw);
+    }catch(e){ return defaultState(); }
+  }
+  function save(s){
+    try{ localStorage.setItem(STORE_KEY, JSON.stringify(s)); }catch(e){ /* storage unavailable */ }
+  }
+
+  var S = load();
+  var ui = { search:"", kodeFilter:"", modal:null, editingId:null, toast:"", formKodeId:null };
+
+  function kodeOf(id){
+    for(var i=0;i<S.kodeList.length;i++){ if(S.kodeList[i].id===id) return S.kodeList[i]; }
+    return null;
+  }
+  function aktifKode(){ return S.kodeList.filter(function(k){ return k.aktif; }); }
+  function nomorSurat(urut, kodeId){
+    var k = kodeOf(kodeId);
+    var kodeStr = k ? k.kode : "?";
+    var padded = String(urut).padStart(S.settings.digit, "0");
+    return S.settings.instansiKode + "-" + kodeStr + "-" + padded;
+  }
+  function fmtTanggal(iso){
+    if(!iso) return "—";
+    var d = new Date(iso+"T00:00:00");
+    var bulan = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
+    return d.getDate()+" "+bulan[d.getMonth()]+" "+d.getFullYear();
+  }
+  function uid(){ return Date.now() + Math.floor(Math.random()*1000); }
+  function esc(str){
+    return String(str==null?"":str).replace(/[&<>"']/g, function(c){
+      return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];
+    });
+  }
+
+  function filteredSurats(){
+    return S.surats.filter(function(s){
+      var matchSearch = true;
+      if(ui.search){
+        var hay = (s.perihal+" "+s.tujuan+" "+nomorSurat(s.urut,s.kodeId)).toLowerCase();
+        matchSearch = hay.indexOf(ui.search.toLowerCase()) > -1;
+      }
+      var matchKode = !ui.kodeFilter || String(s.kodeId) === ui.kodeFilter;
+      return matchSearch && matchKode;
+    }).sort(function(a,b){ return b.urut - a.urut; });
+  }
+
+  function showToast(msg){
+    ui.toast = msg;
+    render();
+    setTimeout(function(){ ui.toast=""; render(); }, 2600);
+  }
+
+  // ---------- render pieces ----------
+
+  function renderHeader(){
+    return ''+
+    '<header class="app-header"><div class="wrap header-inner">'+
+      '<div class="brand">'+
+        '<div class="brand-mark">№</div>'+
+        '<div><h1>SIMORIS</h1><p>Sistem Penomoran Surat Otomatis</p></div>'+
+      '</div>'+
+      '<div class="header-actions">'+
+        '<div class="count-box"><p>Surat tercatat</p><strong class="mono">'+String(S.surats.length).padStart(3,"0")+'</strong></div>'+
+        '<button class="btn btn-ghost" id="btnKelola" style="background:transparent;color:#fff;border-color:rgba(255,255,255,.25)">Kelola Kode</button>'+
+        '<button class="btn btn-segel" id="btnTambah">+ Terbitkan Nomor</button>'+
+      '</div>'+
+    '</div></header>';
+  }
+
+  function renderToolbar(){
+    var opts = aktifKode().map(function(k){
+      return '<option value="'+k.id+'"'+(ui.kodeFilter===String(k.id)?" selected":"")+'>'+esc(k.kode)+' — '+esc(k.nama)+'</option>';
+    }).join("");
+    return ''+
+    '<div class="toolbar">'+
+      '<div class="search">'+
+        '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>'+
+        '<input type="text" id="searchInput" placeholder="Cari perihal, tujuan, atau nomor surat..." value="'+esc(ui.search)+'" />'+
+      '</div>'+
+      '<select id="kodeFilterSelect"><option value="">Semua kode klasifikasi</option>'+opts+'</select>'+
+      '<div class="toolbar-right">'+
+        '<button class="btn btn-ghost" id="btnCsv">Unduh CSV</button>'+
+        '<button class="btn btn-ghost" id="btnPrint">Cetak</button>'+
+      '</div>'+
+    '</div>';
+  }
+
+  function renderTable(){
+    var rows = filteredSurats();
+    if(!rows.length){
+      return '<div class="card"><div class="empty">'+
+        '<p>Tidak ada surat yang cocok</p>'+
+        '<p>Coba ubah kata kunci pencarian atau filter kode klasifikasi.</p>'+
+      '</div></div>';
+    }
+    var body = rows.map(function(s){
+      var k = kodeOf(s.kodeId);
+      var warnaCls = k ? (WARNA_CLASS[k.warna]||"badge-slate") : "badge-slate";
+      return '<tr>'+
+        '<td class="mono" style="color:var(--ink-400)">'+s.urut+'</td>'+
+        '<td><span class="nomor-badge mono">'+esc(nomorSurat(s.urut,s.kodeId))+'</span></td>'+
+        '<td style="white-space:nowrap;color:var(--ink-600)">'+fmtTanggal(s.tanggal)+'</td>'+
+        '<td>'+esc(s.tujuan||"—")+'</td>'+
+        '<td class="truncate" title="'+esc(s.perihal)+'">'+esc(s.perihal)+'</td>'+
+        '<td>'+(k?'<span class="badge '+warnaCls+'">'+esc(k.kode)+'</span>':'—')+'</td>'+
+        '<td style="text-align:right">'+
+          '<button class="btn-danger-text" data-edit="'+s.id+'" style="color:var(--ink-600)">Ubah</button>'+
+          '<button class="btn-danger-text" data-del="'+s.id+'">Hapus</button>'+
+        '</td>'+
+      '</tr>';
+    }).join("");
+    return '<div class="card"><table>'+
+      '<thead><tr><th style="width:40px">No</th><th>Nomor Surat</th><th>Tanggal</th><th>Tujuan</th><th>Perihal</th><th>Klasifikasi</th><th></th></tr></thead>'+
+      '<tbody>'+body+'</tbody>'+
+    '</table></div>';
+  }
+
+  function renderSuratModal(){
+    if(ui.modal !== "surat") return "";
+    var editing = ui.editingId ? S.surats.filter(function(s){return s.id===ui.editingId;})[0] : null;
+    var kodeId = ui.formKodeId || (editing ? editing.kodeId : (aktifKode()[0] && aktifKode()[0].id));
+    var previewUrut = editing ? editing.urut : (S.counter + 1);
+    var preview = kodeId ? nomorSurat(previewUrut, kodeId) : "—";
+    var opsiKode = aktifKode();
+    if(editing){
+      var kodeEditing = kodeOf(editing.kodeId);
+      if(kodeEditing && !kodeEditing.aktif){ opsiKode = opsiKode.concat([kodeEditing]); }
+    }
+    var opts = opsiKode.map(function(k){
+      var label = esc(k.kode)+' — '+esc(k.nama)+(k.aktif?'':' (nonaktif)');
+      return '<option value="'+k.id+'"'+(String(kodeId)===String(k.id)?" selected":"")+'>'+label+'</option>';
+    }).join("");
+
+    return '<div class="overlay" id="suratOverlay"><div class="modal">'+
+      '<div class="modal-head"><h2>'+(editing?"Ubah Surat":"Terbitkan Nomor Baru")+'</h2>'+
+        '<button class="modal-close" id="closeSuratModal">&times;</button></div>'+
+      '<div class="modal-body">'+
+        '<div class="preview-box"><span>'+(editing?"Nomor surat (tidak dapat diubah)":"Nomor surat akan menjadi")+'</span><span class="mono">'+esc(preview)+'</span></div>'+
+        (aktifKode().length ? '' : '<p class="error-text">Belum ada kode klasifikasi aktif. Tambahkan lewat "Kelola Kode" dulu.</p>')+
+        '<div class="field"><label>Kode Klasifikasi</label><select id="fKode">'+opts+'</select></div>'+
+        '<div class="grid2">'+
+          '<div class="field"><label>Tanggal Surat</label><input type="date" id="fTanggal" value="'+esc(editing?editing.tanggal:isoToday(0))+'" /></div>'+
+          '<div class="field"><label>Tujuan Surat</label><input type="text" id="fTujuan" placeholder="Nama/bagian tujuan" value="'+esc(editing?editing.tujuan:"")+'" /></div>'+
+        '</div>'+
+        '<div class="field"><label>Perihal</label><input type="text" id="fPerihal" placeholder="Contoh: PAK Cory / Surat Undangan Rapat" value="'+esc(editing?editing.perihal:"")+'" /></div>'+
+        '<div class="field"><label>Dibuat oleh (opsional)</label><input type="text" id="fDibuatOleh" placeholder="Nama petugas" value="'+esc(editing?editing.dibuatOleh:"")+'" /></div>'+
+        '<p class="error-text" id="formError" style="display:none"></p>'+
+        '<div class="form-actions">'+
+          '<button class="btn-ghost" id="cancelSuratModal">Batal</button>'+
+          '<button class="btn-dark" id="submitSuratModal"'+(aktifKode().length?'':' disabled')+'>'+(editing?"Simpan Perubahan":"Terbitkan")+'</button>'+
+        '</div>'+
+      '</div></div></div>';
+  }
+
+  function renderKelolaModal(){
+    if(ui.modal !== "kelola") return "";
+    var rows = S.kodeList.map(function(k){
+      return '<div class="kode-row"><div><b class="mono">'+esc(k.kode)+'</b> &nbsp;'+esc(k.nama)+
+        (k.aktif ? '' : ' <span style="color:var(--ink-400)">(nonaktif)</span>')+'</div>'+
+        (k.aktif ? '<button class="btn-danger-text" data-nonaktif="'+k.id+'">Nonaktifkan</button>' : '<button class="btn-danger-text" style="color:var(--green)" data-aktifkan="'+k.id+'">Aktifkan</button>')+
+      '</div>';
+    }).join("");
+
+    return '<div class="overlay" id="kelolaOverlay"><div class="modal">'+
+      '<div class="modal-head"><h2>Kelola Kode Klasifikasi</h2><button class="modal-close" id="closeKelolaModal">&times;</button></div>'+
+      '<div class="modal-body">'+
+        '<div class="banner">Kode di bawah mengikuti kode masalah fasilitatif yang umum dipakai di lingkungan Kementerian Hukum (KP, KU, UM, HK, dst). Sub-nomor (mis. KP.10.02) berbeda tiap kantor sesuai lampiran resmi masing-masing — sesuaikan atau tambahkan manual di bawah.</div>'+
+        '<div>'+rows+'</div>'+
+        '<div style="border-top:1px solid var(--ink-100);padding-top:14px">'+
+          '<p class="hint" style="margin-bottom:8px;font-weight:700;color:var(--ink-600);text-transform:uppercase;font-size:11px">Tambah kode manual</p>'+
+          '<div class="grid2">'+
+            '<div class="field"><label>Kode</label><input type="text" id="newKodeKode" placeholder="mis. KP.10.02" /></div>'+
+            '<div class="field"><label>Nama</label><input type="text" id="newKodeNama" placeholder="mis. Kepegawaian - PAK" /></div>'+
+          '</div>'+
+          '<p class="error-text" id="kodeError" style="display:none;margin-top:8px"></p>'+
+          '<button class="btn-dark" id="addKodeBtn" style="width:100%;margin-top:10px;padding:10px;border-radius:8px">+ Tambah Kode</button>'+
+        '</div>'+
+        '<div style="border-top:1px solid var(--ink-100);padding-top:14px">'+
+          '<p class="hint" style="margin-bottom:8px;font-weight:700;color:var(--ink-600);text-transform:uppercase;font-size:11px">Pengaturan penomoran</p>'+
+          '<div class="settings-row">'+
+            '<div class="field" style="flex:1"><label>Kode Instansi</label><input type="text" id="setInstansi" value="'+esc(S.settings.instansiKode)+'" /></div>'+
+            '<div class="field" style="width:110px"><label>Digit Nomor</label><input type="number" min="1" max="6" id="setDigit" value="'+S.settings.digit+'" /></div>'+
+          '</div>'+
+          '<button class="btn-ghost" id="saveSettingsBtn" style="width:100%;margin-top:8px;padding:10px;border-radius:8px">Simpan Pengaturan</button>'+
+        '</div>'+
+      '</div></div></div>';
+  }
+
+  function render(){
+    var html = renderHeader() +
+      '<main class="wrap">' + renderToolbar() + renderTable() + '</main>' +
+      renderSuratModal() + renderKelolaModal() +
+      (ui.toast ? '<div class="toast">'+esc(ui.toast)+'</div>' : '') +
+      '<footer class="app-footer">SIMORIS &middot; data tersimpan di peramban perangkat ini</footer>';
+    document.getElementById("app").innerHTML = html;
+    bind();
+  }
+
+  function bind(){
+    var $ = function(id){ return document.getElementById(id); };
+
+    $("btnTambah").onclick = function(){ ui.modal="surat"; ui.editingId=null; ui.formKodeId=null; render(); };
+    $("btnKelola").onclick = function(){ ui.modal="kelola"; render(); };
+    $("btnCsv").onclick = exportCsv;
+    $("btnPrint").onclick = function(){ window.print(); };
+
+    var si = $("searchInput");
+    si.oninput = function(e){
+      ui.search = e.target.value;
+      render();
+      var el = $("searchInput");
+      el.focus(); el.selectionStart = el.selectionEnd = el.value.length;
+    };
+    $("kodeFilterSelect").onchange = function(e){ ui.kodeFilter = e.target.value; render(); };
+
+    document.querySelectorAll("[data-edit]").forEach(function(btn){
+      btn.onclick = function(){ ui.modal="surat"; ui.editingId = Number(btn.getAttribute("data-edit")); ui.formKodeId=null; render(); };
+    });
+    document.querySelectorAll("[data-del]").forEach(function(btn){
+      btn.onclick = function(){
+        var id = Number(btn.getAttribute("data-del"));
+        var s = S.surats.filter(function(x){return x.id===id;})[0];
+        if(!confirm('Hapus surat "'+(s?nomorSurat(s.urut,s.kodeId):"")+'"? Tindakan ini tidak dapat dibatalkan.')) return;
+        S.surats = S.surats.filter(function(x){ return x.id!==id; });
+        save(S);
+        showToast("Surat dihapus.");
+      };
+    });
+
+    if(ui.modal === "surat"){
+      $("closeSuratModal").onclick = closeSuratModal;
+      $("cancelSuratModal").onclick = closeSuratModal;
+      $("suratOverlay").onclick = function(e){ if(e.target.id==="suratOverlay") closeSuratModal(); };
+      $("fKode").onchange = function(e){ ui.formKodeId = Number(e.target.value); render(); };
+
+      $("submitSuratModal").onclick = function(){
+        var kodeId = Number($("fKode").value);
+        var tanggal = $("fTanggal").value;
+        var tujuan = $("fTujuan").value.trim();
+        var perihal = $("fPerihal").value.trim();
+        var dibuatOleh = $("fDibuatOleh").value.trim();
+        var err = $("formError");
+        if(!kodeId){ err.textContent="Pilih kode klasifikasi."; err.style.display="block"; return; }
+        if(!tanggal){ err.textContent="Tanggal surat wajib diisi."; err.style.display="block"; return; }
+        if(!perihal){ err.textContent="Perihal wajib diisi."; err.style.display="block"; return; }
+
+        if(ui.editingId){
+          var s = S.surats.filter(function(x){return x.id===ui.editingId;})[0];
+          s.kodeId = kodeId; s.tanggal = tanggal; s.tujuan = tujuan; s.perihal = perihal; s.dibuatOleh = dibuatOleh;
+          save(S);
+          ui.modal=null;
+          showToast("Perubahan tersimpan.");
+        } else {
+          S.counter += 1;
+          S.surats.unshift({ id:uid(), urut:S.counter, kodeId:kodeId, tujuan:tujuan, perihal:perihal, tanggal:tanggal, dibuatOleh:dibuatOleh });
+          save(S);
+          var nomor = nomorSurat(S.counter, kodeId);
+          ui.modal=null;
+          showToast("Nomor "+nomor+" berhasil diterbitkan.");
+        }
+      };
+    }
+
+    if(ui.modal === "kelola"){
+      $("closeKelolaModal").onclick = closeKelolaModal;
+      $("kelolaOverlay").onclick = function(e){ if(e.target.id==="kelolaOverlay") closeKelolaModal(); };
+
+      document.querySelectorAll("[data-nonaktif]").forEach(function(btn){
+        btn.onclick = function(){
+          var id = Number(btn.getAttribute("data-nonaktif"));
+          kodeOf(id).aktif = false;
+          save(S); render();
+        };
+      });
+      document.querySelectorAll("[data-aktifkan]").forEach(function(btn){
+        btn.onclick = function(){
+          var id = Number(btn.getAttribute("data-aktifkan"));
+          kodeOf(id).aktif = true;
+          save(S); render();
+        };
+      });
+
+      $("addKodeBtn").onclick = function(){
+        var kode = $("newKodeKode").value.trim();
+        var nama = $("newKodeNama").value.trim();
+        var err = $("kodeError");
+        if(!kode || !nama){ err.textContent="Isi kode dan nama."; err.style.display="block"; return; }
+        var dup = S.kodeList.some(function(k){ return k.kode.toLowerCase()===kode.toLowerCase(); });
+        if(dup){ err.textContent="Kode ini sudah ada."; err.style.display="block"; return; }
+        var warnaCycle = ["blue","green","emerald","amber","violet","red","slate"];
+        S.kodeList.push({ id:uid(), kode:kode, nama:nama, warna:warnaCycle[S.kodeList.length % warnaCycle.length], aktif:true });
+        save(S);
+        showToast("Kode "+kode+" ditambahkan.");
+      };
+
+      $("saveSettingsBtn").onclick = function(){
+        var instansi = $("setInstansi").value.trim() || "W.9";
+        var digit = Math.max(1, Math.min(6, Number($("setDigit").value) || 3));
+        S.settings.instansiKode = instansi;
+        S.settings.digit = digit;
+        save(S);
+        showToast("Pengaturan disimpan.");
+      };
+    }
+  }
+
+  function closeSuratModal(){ ui.modal=null; ui.editingId=null; ui.formKodeId=null; render(); }
+  function closeKelolaModal(){ ui.modal=null; render(); }
+
+  function exportCsv(){
+    var rows = filteredSurats();
+    var header = ["No","Nomor Surat","Tanggal","Tujuan","Perihal","Kode Klasifikasi"];
+    var lines = [header.join(",")];
+    rows.forEach(function(s){
+      var k = kodeOf(s.kodeId);
+      var cells = [
+        s.urut,
+        nomorSurat(s.urut,s.kodeId),
+        fmtTanggal(s.tanggal),
+        s.tujuan||"",
+        s.perihal,
+        k?k.kode:""
+      ].map(function(c){
+        var v = String(c).replace(/"/g,'""');
+        return /[",\n]/.test(v) ? '"'+v+'"' : v;
+      });
+      lines.push(cells.join(","));
+    });
+    var blob = new Blob(["\uFEFF"+lines.join("\r\n")], { type:"text/csv;charset=utf-8;" });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url; a.download = "simoris-rekap-"+isoToday(0)+".csv";
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  render();
+})();
+</script>
+</body>
+</html>
